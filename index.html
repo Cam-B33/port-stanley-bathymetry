@@ -259,6 +259,27 @@
 
             <div class="map-container">
                 <div id="map"></div>
+                <canvas id="flow-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000;"></canvas>
+                
+                <!-- Flow Control Panel -->
+                <div id="flow-controls" style="position: absolute; top: 10px; right: 60px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;">
+                    <div style="margin-bottom: 10px; font-weight: 600;">Rip Current Flow</div>
+                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                        <input type="radio" name="flow-mode" value="off" checked> Off
+                    </label>
+                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                        <input type="radio" name="flow-mode" value="east"> East Current
+                    </label>
+                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                        <input type="radio" name="flow-mode" value="west"> West Current
+                    </label>
+                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                        <input type="radio" name="flow-mode" value="offshore"> Offshore Flow
+                    </label>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">
+                        Shows water flow direction<br>based on bathymetry
+                    </div>
+                </div>
             </div>
 
             <div class="map-info">
@@ -518,6 +539,172 @@ python sentinel_bathymetry.py download-and-process \
                 <figcaption>${img.caption}</figcaption>
             `;
             gallery.appendChild(figure);
+        });
+
+        // ========================================================================
+        // ANIMATED FLOW VISUALIZATION
+        // ========================================================================
+        
+        const flowCanvas = document.getElementById('flow-canvas');
+        const flowCtx = flowCanvas.getContext('2d');
+        let flowMode = 'off';
+        let particles = [];
+        let animationFrame = null;
+        
+        // Resize canvas to match map
+        function resizeCanvas() {
+            const mapElement = document.getElementById('map');
+            flowCanvas.width = mapElement.offsetWidth;
+            flowCanvas.height = mapElement.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        map.on('zoom move', resizeCanvas);
+        
+        // Particle class for flow animation
+        class FlowParticle {
+            constructor(lat, lon, direction) {
+                this.lat = lat;
+                this.lon = lon;
+                this.direction = direction;  // 'east', 'west', or 'offshore'
+                this.age = 0;
+                this.maxAge = 100 + Math.random() * 100;
+                this.speed = 0.0001 + Math.random() * 0.0001;
+                this.opacity = 0;
+            }
+            
+            update() {
+                this.age++;
+                
+                // Fade in/out
+                if (this.age < 20) {
+                    this.opacity = this.age / 20;
+                } else if (this.age > this.maxAge - 20) {
+                    this.opacity = (this.maxAge - this.age) / 20;
+                } else {
+                    this.opacity = 1;
+                }
+                
+                // Move based on direction
+                if (this.direction === 'east') {
+                    this.lon += this.speed;
+                } else if (this.direction === 'west') {
+                    this.lon -= this.speed;
+                } else if (this.direction === 'offshore') {
+                    // Move perpendicular to shore (roughly south for Port Stanley)
+                    this.lat -= this.speed;
+                }
+                
+                return this.age < this.maxAge;
+            }
+            
+            draw() {
+                const point = map.latLngToContainerPoint([this.lat, this.lon]);
+                
+                // Draw particle as a small circle
+                flowCtx.beginPath();
+                flowCtx.arc(point.x, point.y, 2, 0, Math.PI * 2);
+                flowCtx.fillStyle = `rgba(255, 100, 100, ${this.opacity * 0.8})`;
+                flowCtx.fill();
+                
+                // Draw trail
+                const trailLength = 15;
+                let trailLat = this.lat;
+                let trailLon = this.lon;
+                
+                // Calculate trail based on direction
+                if (this.direction === 'east') {
+                    trailLon -= this.speed * trailLength;
+                } else if (this.direction === 'west') {
+                    trailLon += this.speed * trailLength;
+                } else if (this.direction === 'offshore') {
+                    trailLat += this.speed * trailLength;
+                }
+                
+                const trailPoint = map.latLngToContainerPoint([trailLat, trailLon]);
+                
+                flowCtx.beginPath();
+                flowCtx.moveTo(trailPoint.x, trailPoint.y);
+                flowCtx.lineTo(point.x, point.y);
+                flowCtx.strokeStyle = `rgba(255, 100, 100, ${this.opacity * 0.3})`;
+                flowCtx.lineWidth = 1.5;
+                flowCtx.stroke();
+            }
+        }
+        
+        // Generate particles based on bathymetry
+        function generateParticles(direction) {
+            particles = [];
+            
+            // Generate particles in a grid covering the bathymetry area
+            const bounds = map.getBounds();
+            const bathyBounds = {
+                south: 42.648125,
+                west: -81.244475,
+                north: 42.663265,
+                east: -81.211917
+            };
+            
+            // Only generate particles in the bathymetry area
+            const latStep = (bathyBounds.north - bathyBounds.south) / 15;
+            const lonStep = (bathyBounds.east - bathyBounds.west) / 25;
+            
+            for (let lat = bathyBounds.south; lat < bathyBounds.north; lat += latStep) {
+                for (let lon = bathyBounds.west; lon < bathyBounds.east; lon += lonStep) {
+                    // Add some randomness
+                    const jitterLat = (Math.random() - 0.5) * latStep;
+                    const jitterLon = (Math.random() - 0.5) * lonStep;
+                    
+                    particles.push(new FlowParticle(
+                        lat + jitterLat,
+                        lon + jitterLon,
+                        direction
+                    ));
+                }
+            }
+        }
+        
+        // Animation loop
+        function animateFlow() {
+            if (flowMode === 'off') {
+                flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                }
+                return;
+            }
+            
+            // Clear canvas
+            flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
+            
+            // Update and draw particles
+            particles = particles.filter(p => p.update());
+            particles.forEach(p => p.draw());
+            
+            // Regenerate particles if running low
+            if (particles.length < 100) {
+                generateParticles(flowMode);
+            }
+            
+            animationFrame = requestAnimationFrame(animateFlow);
+        }
+        
+        // Handle flow mode changes
+        document.querySelectorAll('input[name="flow-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                flowMode = e.target.value;
+                
+                if (flowMode === 'off') {
+                    particles = [];
+                    flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
+                } else {
+                    generateParticles(flowMode);
+                    if (!animationFrame) {
+                        animateFlow();
+                    }
+                }
+            });
         });
     </script>
 </body>
