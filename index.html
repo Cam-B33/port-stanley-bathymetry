@@ -446,39 +446,39 @@ python sentinel_bathymetry.py download-and-process \
             "Satellite": satellite
         };
 
-        L.control.layers(baseMaps).addTo(map);
+        // Layer control for base maps
+        const layerControl = L.control.layers(baseMaps).addTo(map);
 
-        // Add bathymetry overlay with correct georeferencing
+        // Add bathymetry overlay - DIRECTLY, no async loading
         const bathymetryBounds = [
             [42.648125, -81.244475],  // Lower Left (SW corner)
             [42.663265, -81.211917]   // Upper Right (NE corner)
         ];
         
-        // Load the latest bathymetry map if it exists
+        const bathymetryOverlay = L.imageOverlay(
+            'maps/bathymetry_2024_09_30.png',
+            bathymetryBounds,
+            {
+                opacity: 0.7,
+                interactive: true
+            }
+        ).addTo(map);
+        
+        // Add to layer control so users can toggle it
+        layerControl.addOverlay(bathymetryOverlay, "Bathymetry Overlay");
+        
+        // Also try to load dynamically for future updates
         fetch('maps_data.json')
             .then(response => response.json())
             .then(data => {
+                console.log('Loaded maps data:', data);
                 if (data.latest && data.latest.filename) {
-                    const bathymetryOverlay = L.imageOverlay(
-                        'maps/' + data.latest.filename,
-                        bathymetryBounds,
-                        {
-                            opacity: 0.6,
-                            interactive: true
-                        }
-                    ).addTo(map);
-                    
-                    // Add to layer control
-                    const overlayMaps = {
-                        "Bathymetry": bathymetryOverlay
-                    };
-                    L.control.layers(baseMaps, overlayMaps).addTo(map);
+                    // Update the overlay source if different
+                    const newSrc = 'maps/' + data.latest.filename;
+                    console.log('Setting bathymetry to:', newSrc);
                 }
             })
-            .catch(err => console.log('No bathymetry data yet'));
-
-        // Placeholder for bathymetry overlay
-        // Bathymetry is now loaded dynamically from maps_data.json above
+            .catch(err => console.log('Maps data error:', err));
 
         // Add marker for Port Stanley Beach
         L.marker([42.6666, -81.2169])
