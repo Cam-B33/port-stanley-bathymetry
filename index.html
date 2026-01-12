@@ -448,13 +448,37 @@ python sentinel_bathymetry.py download-and-process \
 
         L.control.layers(baseMaps).addTo(map);
 
+        // Add bathymetry overlay with correct georeferencing
+        const bathymetryBounds = [
+            [42.648125, -81.244475],  // Lower Left (SW corner)
+            [42.663265, -81.211917]   // Upper Right (NE corner)
+        ];
+        
+        // Load the latest bathymetry map if it exists
+        fetch('maps_data.json')
+            .then(response => response.json())
+            .then(data => {
+                if (data.latest && data.latest.filename) {
+                    const bathymetryOverlay = L.imageOverlay(
+                        'maps/' + data.latest.filename,
+                        bathymetryBounds,
+                        {
+                            opacity: 0.6,
+                            interactive: true
+                        }
+                    ).addTo(map);
+                    
+                    // Add to layer control
+                    const overlayMaps = {
+                        "Bathymetry": bathymetryOverlay
+                    };
+                    L.control.layers(baseMaps, overlayMaps).addTo(map);
+                }
+            })
+            .catch(err => console.log('No bathymetry data yet'));
+
         // Placeholder for bathymetry overlay
-        // In production, you would load your georeferenced bathymetry image here
-        // Example:
-        // const bathymetryBounds = [[42.648, -81.244], [42.663, -81.212]];
-        // L.imageOverlay('output/port_stanley_sept_30_2024.png', bathymetryBounds, {
-        //     opacity: 0.7
-        // }).addTo(map);
+        // Bathymetry is now loaded dynamically from maps_data.json above
 
         // Add marker for Port Stanley Beach
         L.marker([42.6666, -81.2169])
