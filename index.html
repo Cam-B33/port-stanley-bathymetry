@@ -501,10 +501,10 @@ python sentinel_bathymetry.py download-and-process \
             position: 'bottomleft'
         }).addTo(map);
 
-        // Add bathymetry overlay - manually adjusted for alignment
+        // Add bathymetry overlay - fine-tuned alignment
         const bathymetryBounds = [
-            [42.6470, -81.2430],  // Southwest corner - shifted east and south
-            [42.6622, -81.2104]   // Northeast corner - shifted east and south
+            [42.6481, -81.2445],  // Southwest corner (moved back to original)
+            [42.6633, -81.2119]   // Northeast corner (moved back to original)
         ];
         
         const bathymetryOverlay = L.imageOverlay(
