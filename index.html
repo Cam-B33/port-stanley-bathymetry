@@ -101,13 +101,21 @@
             width: 100%;
             height: 600px;
             border: 1px solid var(--border);
-            margin: 2rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 2rem 0 0 0;  /* Remove bottom margin, we'll add it to attribution */
             position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         #map {
             width: 100%;
             height: 100%;
+        }
+        
+        /* Hide Leaflet's default attribution */
+        .leaflet-control-attribution {
+            display: none !important;
         }
         
         .map-info {
@@ -262,7 +270,7 @@
                 <canvas id="flow-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000;"></canvas>
                 
                 <!-- Flow Control Panel -->
-                <div id="flow-controls" style="position: absolute; top: 10px; right: 60px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;">
+                <div id="flow-controls" style="position: absolute; top: 10px; left: 10px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;">
                     <div style="margin-bottom: 10px; font-weight: 600;">Rip Current Flow</div>
                     <label style="display: block; margin-bottom: 8px; cursor: pointer;">
                         <input type="radio" name="flow-mode" value="off" checked> Off
@@ -278,6 +286,19 @@
                     </label>
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">
                         Shows water flow direction<br>based on bathymetry
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map Attribution & Info (outside the map) -->
+            <div style="margin-top: 15px; padding: 10px; background: #f8f8f8; border-radius: 5px; font-size: 0.8rem; color: #666;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <strong>Map data:</strong> © OpenStreetMap contributors | 
+                        <strong>Satellite:</strong> Esri, Maxar, Earthstar Geographics
+                    </div>
+                    <div>
+                        <strong>Bathymetry:</strong> Sentinel-2 satellite imagery (10m resolution)
                     </div>
                 </div>
             </div>
@@ -444,8 +465,16 @@ python sentinel_bathymetry.py download-and-process \
             });
         });
 
-        // Initialize map
-        const map = L.map('map').setView([42.6666, -81.2169], 15);
+        // Initialize map (remove attribution from map)
+        const map = L.map('map', {
+            attributionControl: false,
+            zoomControl: false  // We'll reposition this
+        }).setView([42.6666, -81.2169], 15);
+        
+        // Add zoom control to top-left
+        L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
 
         // Add base map
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -467,8 +496,10 @@ python sentinel_bathymetry.py download-and-process \
             "Satellite": satellite
         };
 
-        // Layer control for base maps
-        const layerControl = L.control.layers(baseMaps).addTo(map);
+        // Layer control for base maps - position bottom left
+        const layerControl = L.control.layers(baseMaps, null, {
+            position: 'bottomleft'
+        }).addTo(map);
 
         // Add bathymetry overlay - manually adjusted for alignment
         const bathymetryBounds = [
