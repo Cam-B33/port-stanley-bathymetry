@@ -688,39 +688,6 @@ python sentinel_bathymetry.py download-and-process \
                 flowCtx.stroke();
             }
         }
-            draw() {
-                const point = map.latLngToContainerPoint([this.lat, this.lon]);
-                
-                // Draw particle as a small circle
-                flowCtx.beginPath();
-                flowCtx.arc(point.x, point.y, 2, 0, Math.PI * 2);
-                flowCtx.fillStyle = `rgba(255, 100, 100, ${this.opacity * 0.8})`;
-                flowCtx.fill();
-                
-                // Draw trail
-                const trailLength = 15;
-                let trailLat = this.lat;
-                let trailLon = this.lon;
-                
-                // Calculate trail based on direction
-                if (this.direction === 'east') {
-                    trailLon -= this.speed * trailLength;
-                } else if (this.direction === 'west') {
-                    trailLon += this.speed * trailLength;
-                } else if (this.direction === 'offshore') {
-                    trailLat += this.speed * trailLength;
-                }
-                
-                const trailPoint = map.latLngToContainerPoint([trailLat, trailLon]);
-                
-                flowCtx.beginPath();
-                flowCtx.moveTo(trailPoint.x, trailPoint.y);
-                flowCtx.lineTo(point.x, point.y);
-                flowCtx.strokeStyle = `rgba(255, 100, 100, ${this.opacity * 0.3})`;
-                flowCtx.lineWidth = 1.5;
-                flowCtx.stroke();
-            }
-        }
         
         // Generate particles based on bathymetry
         function generateParticles(direction) {
