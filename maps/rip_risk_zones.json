@@ -1,0 +1,18 @@
+{
+  "bounds": {
+    "south": 4721770.0,
+    "west": 479960.0,
+    "north": 4723450.0,
+    "east": 482630.0
+  },
+  "risk_zones": {
+    "east": [],
+    "west": [],
+    "offshore": []
+  },
+  "metadata": {
+    "description": "Rip current risk heat map for different flow directions",
+    "risk_scale": "0 = safe, 1 = extreme danger",
+    "grid_resolution": 15
+  }
+}

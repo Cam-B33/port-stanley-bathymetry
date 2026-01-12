@@ -282,10 +282,12 @@
                         <input type="radio" name="flow-mode" value="west"> West Current
                     </label>
                     <label style="display: block; margin-bottom: 8px; cursor: pointer;">
-                        <input type="radio" name="flow-mode" value="offshore"> Offshore Flow
+                        <input type="radio" name="flow-mode" value="offshore"> Onshore Flow
                     </label>
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">
-                        Shows water flow direction<br>based on bathymetry
+                        <strong>Heat map legend:</strong><br>
+                        🟢 Safe • 🟡 Low risk<br>
+                        🟠 Moderate • 🔴 Danger
                     </div>
                 </div>
             </div>
@@ -573,225 +575,107 @@ python sentinel_bathymetry.py download-and-process \
         });
 
         // ========================================================================
-        // ANIMATED FLOW VISUALIZATION WITH BATHYMETRY
+        // INTERACTIVE RIP CURRENT HEAT MAP
         // ========================================================================
         
         const flowCanvas = document.getElementById('flow-canvas');
         const flowCtx = flowCanvas.getContext('2d');
         let flowMode = 'off';
-        let particles = [];
-        let animationFrame = null;
-        let depthGrid = null;  // Will hold bathymetry flow data
+        let riskZones = null;  // Will hold risk data
         
-        // Load depth grid data
-        fetch('maps/depth_grid.json')
+        // Load risk zone data
+        fetch('maps/rip_risk_zones.json')
             .then(response => response.json())
             .then(data => {
-                depthGrid = data;
-                console.log('Loaded depth grid:', data.grid_size);
+                riskZones = data;
+                console.log('Loaded risk zones:', data.metadata);
             })
-            .catch(err => console.log('Depth grid not found, using simple flow'));
+            .catch(err => console.log('Risk zones not found, heat map disabled'));
         
         // Resize canvas to match map
         function resizeCanvas() {
             const mapElement = document.getElementById('map');
             flowCanvas.width = mapElement.offsetWidth;
             flowCanvas.height = mapElement.offsetHeight;
+            drawHeatMap();  // Redraw when resized
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         map.on('zoom move', resizeCanvas);
         
-        // Get flow direction at a specific lat/lon from depth grid
-        function getFlowAtLocation(lat, lon) {
-            if (!depthGrid) return { flow_x: 0, flow_y: 0 };
-            
-            const grid = depthGrid.grid;
-            const bounds = depthGrid.bounds;
-            
-            // Convert lat/lon to grid coordinates
-            const rows = depthGrid.grid_size.rows;
-            const cols = depthGrid.grid_size.cols;
-            
-            // Normalize to 0-1
-            const normLat = (lat - bounds.south) / (bounds.north - bounds.south);
-            const normLon = (lon - bounds.west) / (bounds.east - bounds.west);
-            
-            // Convert to grid indices
-            const gridRow = Math.floor(normLat * (rows - 1));
-            const gridCol = Math.floor(normLon * (cols - 1));
-            
-            // Bounds check
-            if (gridRow < 0 || gridRow >= rows || gridCol < 0 || gridCol >= cols) {
-                return { flow_x: 0, flow_y: 0 };
-            }
-            
-            const cell = grid[gridRow][gridCol];
-            return {
-                flow_x: cell.flow_x || 0,
-                flow_y: cell.flow_y || 0,
-                depth: cell.depth
-            };
-        }
-        
-        // Particle class for bathymetry-aware flow animation
-        class FlowParticle {
-            constructor(lat, lon, direction) {
-                this.lat = lat;
-                this.lon = lon;
-                this.direction = direction;  // 'east', 'west', or 'offshore'
-                this.age = 0;
-                this.maxAge = 150 + Math.random() * 150;
-                this.baseSpeed = 0.00008;
-                this.opacity = 0;
-            }
-            
-            update() {
-                this.age++;
-                
-                // Fade in/out
-                if (this.age < 30) {
-                    this.opacity = this.age / 30;
-                } else if (this.age > this.maxAge - 30) {
-                    this.opacity = (this.maxAge - this.age) / 30;
-                } else {
-                    this.opacity = 1;
-                }
-                
-                // Get bathymetry-based flow direction at current location
-                const bathyFlow = getFlowAtLocation(this.lat, this.lon);
-                
-                // Combine bathymetry flow with current direction
-                let flowLat = bathyFlow.flow_y * 0.00003;  // Bathymetry influence
-                let flowLon = bathyFlow.flow_x * 0.00003;
-                
-                // Add directional bias based on current mode
-                if (this.direction === 'east') {
-                    flowLon += this.baseSpeed * 1.5;  // Strong eastward bias
-                    flowLat += bathyFlow.flow_y * 0.00005;  // Bathymetry pulls toward channels
-                } else if (this.direction === 'west') {
-                    flowLon -= this.baseSpeed * 1.5;  // Strong westward bias
-                    flowLat += bathyFlow.flow_y * 0.00005;
-                } else if (this.direction === 'offshore') {
-                    // Offshore flow: bathymetry dominates (flows down channels)
-                    flowLat = bathyFlow.flow_y * 0.0001;
-                    flowLon = bathyFlow.flow_x * 0.0001;
-                    // Add slight offshore bias
-                    flowLat -= this.baseSpeed * 0.5;
-                }
-                
-                // Update position
-                this.lat += flowLat;
-                this.lon += flowLon;
-                
-                return this.age < this.maxAge;
-            }
-            
-            draw() {
-                const point = map.latLngToContainerPoint([this.lat, this.lon]);
-                
-                // Get flow at this location for coloring
-                const bathyFlow = getFlowAtLocation(this.lat, this.lon);
-                const flowMagnitude = Math.sqrt(bathyFlow.flow_x**2 + bathyFlow.flow_y**2);
-                
-                // Color based on flow strength (stronger = brighter red)
-                const intensity = Math.min(255, 100 + flowMagnitude * 300);
-                
-                // Draw particle
-                flowCtx.beginPath();
-                flowCtx.arc(point.x, point.y, 2.5, 0, Math.PI * 2);
-                flowCtx.fillStyle = `rgba(${intensity}, 50, 50, ${this.opacity * 0.9})`;
-                flowCtx.fill();
-                
-                // Draw trail showing direction
-                const trailLength = 20;
-                const bathyFlow2 = getFlowAtLocation(this.lat, this.lon);
-                const trailLat = this.lat - bathyFlow2.flow_y * 0.0002 * trailLength;
-                const trailLon = this.lon - bathyFlow2.flow_x * 0.0002 * trailLength;
-                
-                const trailPoint = map.latLngToContainerPoint([trailLat, trailLon]);
-                
-                flowCtx.beginPath();
-                flowCtx.moveTo(trailPoint.x, trailPoint.y);
-                flowCtx.lineTo(point.x, point.y);
-                flowCtx.strokeStyle = `rgba(${intensity}, 50, 50, ${this.opacity * 0.4})`;
-                flowCtx.lineWidth = 2;
-                flowCtx.stroke();
-            }
-        }
-        
-        // Generate particles based on bathymetry
-        function generateParticles(direction) {
-            particles = [];
-            
-            // Generate particles in a grid covering the bathymetry area
-            const bounds = map.getBounds();
-            const bathyBounds = {
-                south: 42.648125,
-                west: -81.244475,
-                north: 42.663265,
-                east: -81.211917
-            };
-            
-            // Only generate particles in the bathymetry area
-            const latStep = (bathyBounds.north - bathyBounds.south) / 15;
-            const lonStep = (bathyBounds.east - bathyBounds.west) / 25;
-            
-            for (let lat = bathyBounds.south; lat < bathyBounds.north; lat += latStep) {
-                for (let lon = bathyBounds.west; lon < bathyBounds.east; lon += lonStep) {
-                    // Add some randomness
-                    const jitterLat = (Math.random() - 0.5) * latStep;
-                    const jitterLon = (Math.random() - 0.5) * lonStep;
-                    
-                    particles.push(new FlowParticle(
-                        lat + jitterLat,
-                        lon + jitterLon,
-                        direction
-                    ));
-                }
-            }
-        }
-        
-        // Animation loop
-        function animateFlow() {
-            if (flowMode === 'off') {
+        // Draw heat map based on current flow mode
+        function drawHeatMap() {
+            if (flowMode === 'off' || !riskZones) {
                 flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
-                if (animationFrame) {
-                    cancelAnimationFrame(animationFrame);
-                    animationFrame = null;
-                }
                 return;
             }
             
-            // Clear canvas
             flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
             
-            // Update and draw particles
-            particles = particles.filter(p => p.update());
-            particles.forEach(p => p.draw());
+            // Get risk zones for current direction
+            const zones = riskZones.risk_zones[flowMode];
+            if (!zones || zones.length === 0) return;
             
-            // Regenerate particles if running low
-            if (particles.length < 100) {
-                generateParticles(flowMode);
-            }
-            
-            animationFrame = requestAnimationFrame(animateFlow);
+            // Draw each risk cell as a colored square
+            zones.forEach(zone => {
+                const point = map.latLngToContainerPoint([zone.lat, zone.lon]);
+                
+                // Color based on risk level (0-1)
+                // Green (safe) → Yellow → Orange → Red (danger)
+                let r, g, b;
+                if (zone.risk < 0.25) {
+                    // Green to yellow
+                    r = Math.floor(zone.risk * 4 * 255);
+                    g = 255;
+                    b = 0;
+                } else if (zone.risk < 0.5) {
+                    // Yellow to orange
+                    r = 255;
+                    g = Math.floor((1 - (zone.risk - 0.25) * 4) * 255);
+                    b = 0;
+                } else if (zone.risk < 0.75) {
+                    // Orange to red
+                    r = 255;
+                    g = Math.floor((1 - (zone.risk - 0.5) * 4) * 128);
+                    b = 0;
+                } else {
+                    // Deep red
+                    r = 255;
+                    g = 0;
+                    b = 0;
+                }
+                
+                // Draw semi-transparent square
+                const cellSize = 20;  // Size of each heat map cell
+                flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.4 + zone.risk * 0.4})`;
+                flowCtx.fillRect(
+                    point.x - cellSize/2,
+                    point.y - cellSize/2,
+                    cellSize,
+                    cellSize
+                );
+                
+                // Add glow effect for high risk areas
+                if (zone.risk > 0.7) {
+                    flowCtx.shadowBlur = 15;
+                    flowCtx.shadowColor = `rgba(255, 0, 0, ${zone.risk})`;
+                    flowCtx.fillStyle = `rgba(255, 0, 0, ${zone.risk * 0.3})`;
+                    flowCtx.fillRect(
+                        point.x - cellSize/2,
+                        point.y - cellSize/2,
+                        cellSize,
+                        cellSize
+                    );
+                    flowCtx.shadowBlur = 0;
+                }
+            });
         }
         
         // Handle flow mode changes
         document.querySelectorAll('input[name="flow-mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 flowMode = e.target.value;
-                
-                if (flowMode === 'off') {
-                    particles = [];
-                    flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
-                } else {
-                    generateParticles(flowMode);
-                    if (!animationFrame) {
-                        animateFlow();
-                    }
-                }
+                drawHeatMap();
             });
         });
     </script>
