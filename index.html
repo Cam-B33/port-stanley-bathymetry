@@ -542,7 +542,7 @@ python sentinel_bathymetry.py download-and-process \
         });
 
         // ========================================================================
-        // ANIMATED FLOW VISUALIZATION
+        // ANIMATED FLOW VISUALIZATION WITH BATHYMETRY
         // ========================================================================
         
         const flowCanvas = document.getElementById('flow-canvas');
@@ -550,6 +550,16 @@ python sentinel_bathymetry.py download-and-process \
         let flowMode = 'off';
         let particles = [];
         let animationFrame = null;
+        let depthGrid = null;  // Will hold bathymetry flow data
+        
+        // Load depth grid data
+        fetch('maps/depth_grid.json')
+            .then(response => response.json())
+            .then(data => {
+                depthGrid = data;
+                console.log('Loaded depth grid:', data.grid_size);
+            })
+            .catch(err => console.log('Depth grid not found, using simple flow'));
         
         // Resize canvas to match map
         function resizeCanvas() {
@@ -561,15 +571,47 @@ python sentinel_bathymetry.py download-and-process \
         window.addEventListener('resize', resizeCanvas);
         map.on('zoom move', resizeCanvas);
         
-        // Particle class for flow animation
+        // Get flow direction at a specific lat/lon from depth grid
+        function getFlowAtLocation(lat, lon) {
+            if (!depthGrid) return { flow_x: 0, flow_y: 0 };
+            
+            const grid = depthGrid.grid;
+            const bounds = depthGrid.bounds;
+            
+            // Convert lat/lon to grid coordinates
+            const rows = depthGrid.grid_size.rows;
+            const cols = depthGrid.grid_size.cols;
+            
+            // Normalize to 0-1
+            const normLat = (lat - bounds.south) / (bounds.north - bounds.south);
+            const normLon = (lon - bounds.west) / (bounds.east - bounds.west);
+            
+            // Convert to grid indices
+            const gridRow = Math.floor(normLat * (rows - 1));
+            const gridCol = Math.floor(normLon * (cols - 1));
+            
+            // Bounds check
+            if (gridRow < 0 || gridRow >= rows || gridCol < 0 || gridCol >= cols) {
+                return { flow_x: 0, flow_y: 0 };
+            }
+            
+            const cell = grid[gridRow][gridCol];
+            return {
+                flow_x: cell.flow_x || 0,
+                flow_y: cell.flow_y || 0,
+                depth: cell.depth
+            };
+        }
+        
+        // Particle class for bathymetry-aware flow animation
         class FlowParticle {
             constructor(lat, lon, direction) {
                 this.lat = lat;
                 this.lon = lon;
                 this.direction = direction;  // 'east', 'west', or 'offshore'
                 this.age = 0;
-                this.maxAge = 100 + Math.random() * 100;
-                this.speed = 0.0001 + Math.random() * 0.0001;
+                this.maxAge = 150 + Math.random() * 150;
+                this.baseSpeed = 0.00008;
                 this.opacity = 0;
             }
             
@@ -577,27 +619,75 @@ python sentinel_bathymetry.py download-and-process \
                 this.age++;
                 
                 // Fade in/out
-                if (this.age < 20) {
-                    this.opacity = this.age / 20;
-                } else if (this.age > this.maxAge - 20) {
-                    this.opacity = (this.maxAge - this.age) / 20;
+                if (this.age < 30) {
+                    this.opacity = this.age / 30;
+                } else if (this.age > this.maxAge - 30) {
+                    this.opacity = (this.maxAge - this.age) / 30;
                 } else {
                     this.opacity = 1;
                 }
                 
-                // Move based on direction
+                // Get bathymetry-based flow direction at current location
+                const bathyFlow = getFlowAtLocation(this.lat, this.lon);
+                
+                // Combine bathymetry flow with current direction
+                let flowLat = bathyFlow.flow_y * 0.00003;  // Bathymetry influence
+                let flowLon = bathyFlow.flow_x * 0.00003;
+                
+                // Add directional bias based on current mode
                 if (this.direction === 'east') {
-                    this.lon += this.speed;
+                    flowLon += this.baseSpeed * 1.5;  // Strong eastward bias
+                    flowLat += bathyFlow.flow_y * 0.00005;  // Bathymetry pulls toward channels
                 } else if (this.direction === 'west') {
-                    this.lon -= this.speed;
+                    flowLon -= this.baseSpeed * 1.5;  // Strong westward bias
+                    flowLat += bathyFlow.flow_y * 0.00005;
                 } else if (this.direction === 'offshore') {
-                    // Move perpendicular to shore (roughly south for Port Stanley)
-                    this.lat -= this.speed;
+                    // Offshore flow: bathymetry dominates (flows down channels)
+                    flowLat = bathyFlow.flow_y * 0.0001;
+                    flowLon = bathyFlow.flow_x * 0.0001;
+                    // Add slight offshore bias
+                    flowLat -= this.baseSpeed * 0.5;
                 }
+                
+                // Update position
+                this.lat += flowLat;
+                this.lon += flowLon;
                 
                 return this.age < this.maxAge;
             }
             
+            draw() {
+                const point = map.latLngToContainerPoint([this.lat, this.lon]);
+                
+                // Get flow at this location for coloring
+                const bathyFlow = getFlowAtLocation(this.lat, this.lon);
+                const flowMagnitude = Math.sqrt(bathyFlow.flow_x**2 + bathyFlow.flow_y**2);
+                
+                // Color based on flow strength (stronger = brighter red)
+                const intensity = Math.min(255, 100 + flowMagnitude * 300);
+                
+                // Draw particle
+                flowCtx.beginPath();
+                flowCtx.arc(point.x, point.y, 2.5, 0, Math.PI * 2);
+                flowCtx.fillStyle = `rgba(${intensity}, 50, 50, ${this.opacity * 0.9})`;
+                flowCtx.fill();
+                
+                // Draw trail showing direction
+                const trailLength = 20;
+                const bathyFlow2 = getFlowAtLocation(this.lat, this.lon);
+                const trailLat = this.lat - bathyFlow2.flow_y * 0.0002 * trailLength;
+                const trailLon = this.lon - bathyFlow2.flow_x * 0.0002 * trailLength;
+                
+                const trailPoint = map.latLngToContainerPoint([trailLat, trailLon]);
+                
+                flowCtx.beginPath();
+                flowCtx.moveTo(trailPoint.x, trailPoint.y);
+                flowCtx.lineTo(point.x, point.y);
+                flowCtx.strokeStyle = `rgba(${intensity}, 50, 50, ${this.opacity * 0.4})`;
+                flowCtx.lineWidth = 2;
+                flowCtx.stroke();
+            }
+        }
             draw() {
                 const point = map.latLngToContainerPoint([this.lat, this.lon]);
                 
