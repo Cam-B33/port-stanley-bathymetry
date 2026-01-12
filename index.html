@@ -470,10 +470,10 @@ python sentinel_bathymetry.py download-and-process \
         // Layer control for base maps
         const layerControl = L.control.layers(baseMaps).addTo(map);
 
-        // Add bathymetry overlay - DIRECTLY, no async loading
+        // Add bathymetry overlay - manually adjusted for alignment
         const bathymetryBounds = [
-            [42.648125, -81.244475],  // Lower Left (SW corner)
-            [42.663265, -81.211917]   // Upper Right (NE corner)
+            [42.6470, -81.2430],  // Southwest corner - shifted east and south
+            [42.6622, -81.2104]   // Northeast corner - shifted east and south
         ];
         
         const bathymetryOverlay = L.imageOverlay(
