@@ -1,0 +1,126 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║                  GITHUB PAGES DEPLOYMENT CHEAT SHEET                 ║
+║                     Port Stanley Bathymetry Website                  ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+📍 YOUR SITE URL (once deployed):
+   https://cam-b33.github.io/port-stanley-bathymetry/
+
+═══════════════════════════════════════════════════════════════════════
+
+🚀 FIRST TIME SETUP (Do once):
+
+1. Create GitHub repository:
+   - Go to: https://github.com/new
+   - Name: port-stanley-bathymetry
+   - Public repository
+   - Don't initialize with anything
+   - Click "Create repository"
+
+2. In terminal (in website-package folder):
+
+   git init
+   git add .
+   git commit -m "Initial website deployment"
+   git remote add origin https://github.com/Cam-B33/port-stanley-bathymetry.git
+   git branch -M main
+   git push -u origin main
+
+3. Enable GitHub Pages:
+   - Go to: https://github.com/Cam-B33/port-stanley-bathymetry/settings/pages
+   - Source: Branch "main", folder "/ (root)"
+   - Click Save
+   - Wait 2 minutes, then visit your site!
+
+═══════════════════════════════════════════════════════════════════════
+
+📸 ADD YOUR FIRST MAP:
+
+# From your project root directory (where sentinel_bathymetry.py is):
+
+python website-package/update_website.py \
+    --add output/port_stanley_sept_30_2024.png \
+    --date 2024-09-30 \
+    --description "Initial bathymetry mapping" \
+    --website-dir website-package
+
+cd website-package
+git add .
+git commit -m "Add first bathymetry map"
+git push
+
+═══════════════════════════════════════════════════════════════════════
+
+🔄 REGULAR UPDATES (Every 10 days):
+
+# Process new Sentinel-2 imagery:
+python sentinel_bathymetry.py process \
+    --scene "/path/to/new/sentinel/data.SAFE" \
+    --aoi aoi.geojson \
+    --output july_15_2024
+
+# Add to website:
+python website-package/update_website.py \
+    --add output/july_15_2024.png \
+    --date 2024-07-15 \
+    --description "Post-storm conditions" \
+    --website-dir website-package
+
+# Push to GitHub (updates website automatically):
+cd website-package
+git add .
+git commit -m "Add July 15 bathymetry"
+git push
+
+═══════════════════════════════════════════════════════════════════════
+
+🧪 TEST LOCALLY BEFORE PUSHING:
+
+cd website-package
+python -m http.server 8000
+
+# Open in browser: http://localhost:8000
+
+═══════════════════════════════════════════════════════════════════════
+
+📂 YOUR FILE STRUCTURE SHOULD LOOK LIKE:
+
+port-stanley-bathymetry/           ← Your main project folder
+├── sentinel_bathymetry.py         ← Processing script
+├── aoi.geojson                    ← Your beach area
+├── output/                        ← Processing outputs
+│   ├── bathymetry_*.tif
+│   └── bathymetry_*.png          ← Maps you'll add to website
+└── website-package/               ← THIS IS YOUR GITHUB REPO
+    ├── index.html                ← Connected to GitHub
+    ├── maps/                     ← Maps get copied here
+    └── maps_data.json           ← Auto-updated by script
+
+═══════════════════════════════════════════════════════════════════════
+
+⚠️  TROUBLESHOOTING:
+
+Site not updating?
+→ Wait 2-3 minutes after git push
+→ Hard refresh browser (Ctrl+Shift+R)
+→ Check GitHub Actions tab for errors
+
+Images not showing?
+→ Verify files are in website-package/maps/
+→ Check maps_data.json has correct filename
+→ Ensure you ran git add, commit, push
+
+Git errors?
+→ Make sure you're IN the website-package folder
+→ Check remote: git remote -v
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 NEXT: After basic site is running, we can add:
+   • Georeferenced map overlay
+   • Multiple map layers with date toggle
+   • Lifeguard tower markers
+   • Custom swim zone boundaries
+   • Time-lapse animation
+
+═══════════════════════════════════════════════════════════════════════
