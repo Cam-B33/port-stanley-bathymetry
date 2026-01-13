@@ -645,9 +645,15 @@ python sentinel_bathymetry.py download-and-process \
                     b = 0;
                 }
                 
-                // Draw semi-transparent square
-                const cellSize = 20;  // Size of each heat map cell
-                flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.4 + zone.risk * 0.4})`;
+                // Larger cells with blur for fuzzy continuous effect
+                const cellSize = 35;  // Increased from 20 to 35
+                
+                // Add gaussian blur effect
+                flowCtx.shadowBlur = 25;  // Strong blur
+                flowCtx.shadowColor = `rgba(${r}, ${g}, ${b}, ${0.6 + zone.risk * 0.4})`;
+                
+                // Draw main cell
+                flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.3 + zone.risk * 0.5})`;
                 flowCtx.fillRect(
                     point.x - cellSize/2,
                     point.y - cellSize/2,
@@ -655,19 +661,20 @@ python sentinel_bathymetry.py download-and-process \
                     cellSize
                 );
                 
-                // Add glow effect for high risk areas
-                if (zone.risk > 0.7) {
-                    flowCtx.shadowBlur = 15;
-                    flowCtx.shadowColor = `rgba(255, 0, 0, ${zone.risk})`;
-                    flowCtx.fillStyle = `rgba(255, 0, 0, ${zone.risk * 0.3})`;
+                // Draw inner glow for high risk
+                if (zone.risk > 0.5) {
+                    flowCtx.shadowBlur = 35;
+                    flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${zone.risk * 0.4})`;
                     flowCtx.fillRect(
                         point.x - cellSize/2,
                         point.y - cellSize/2,
                         cellSize,
                         cellSize
                     );
-                    flowCtx.shadowBlur = 0;
                 }
+                
+                // Reset shadow
+                flowCtx.shadowBlur = 0;
             });
         }
         
