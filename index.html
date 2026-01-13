@@ -360,12 +360,54 @@
             <h3>Limitations</h3>
             <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy degrades with increasing turbidity, wave action, and sun glint. Cloud cover precludes data acquisition. Temporal resolution is limited by satellite revisit frequency (5 days for Sentinel-2 constellation).</p>
 
+            <h3>Rip Current Risk Analysis</h3>
+            <p>The interactive heat map visualizes rip current formation potential by analyzing bathymetric gradients and flow convergence patterns. This physics-based approach identifies zones where water is likely to accelerate offshore.</p>
+
+            <div class="theorem">
+                <div class="theorem-title">Flow Dynamics</div>
+                <p>The risk calculation incorporates three components:</p>
+                <p style="margin-left: 1.5rem;">
+                    <strong>1. Bathymetric gradient:</strong> ∇Z = (∂Z/∂x, ∂Z/∂y)<br>
+                    <strong>2. Flow convergence:</strong> ∇·<strong>u</strong> = ∂u/∂x + ∂v/∂y<br>
+                    <strong>3. Offshore component:</strong> u<sub>⊥</sub> = <strong>u</strong>·<strong>n</strong>
+                </p>
+                <p>where <strong>u</strong> is the velocity field normalized from bathymetric gradients and <strong>n</strong> is the shore-normal direction.</p>
+            </div>
+
+            <h4>Risk Modes</h4>
+            <p><strong>East Current:</strong> Models conditions when longshore currents flow eastward (typical with southwest winds). Water flows parallel to shore until encountering deep channels, where it converges and accelerates offshore.</p>
+            
+            <p><strong>West Current:</strong> Models westward longshore flow (typical with northeast winds). Risk zones shift as flow patterns reverse along the beach.</p>
+            
+            <p><strong>Onshore Flow:</strong> Models pure bathymetry-driven rip currents independent of longshore drift. These represent the natural rip channels that persist across varying wave conditions.</p>
+
+            <h4>Risk Calculation</h4>
+            <p>For each grid cell, risk is computed as a weighted combination of:</p>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Longshore flow component</strong> (40%): Magnitude of east/west current</li>
+                <li><strong>Convergence</strong> (30%): Negative divergence indicating water piling up</li>
+                <li><strong>Offshore flow</strong> (30%): Shore-perpendicular velocity component</li>
+            </ul>
+            
+            <p>The final risk score is normalized to [0,1] and rendered as a color-coded heat map where red indicates high danger and green indicates safe conditions.</p>
+
+            <h4>Visualization Parameters</h4>
+            <p>The heat map employs Gaussian blur (σ = 25px) to create smooth, continuous risk zones that better represent the diffuse nature of rip current hazards. Cell size is calibrated to balance spatial resolution with visual clarity at typical zoom levels.</p>
+
+            <h3>Limitations</h3>
+            <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy degrades with increasing turbidity, wave action, and sun glint. Cloud cover precludes data acquisition. Temporal resolution is limited by satellite revisit frequency (5 days for Sentinel-2 constellation).</p>
+            
+            <p>The rip current risk model assumes steady-state flow conditions and does not account for temporal variations in wave height, period, or tidal stage. Actual rip current activity depends on these factors in addition to bathymetry. The model serves as a baseline hazard assessment rather than a real-time prediction system.</p>
+
             <h3>References</h3>
             <p style="margin-left: 2rem; text-indent: -2rem; padding-left: 2rem;">
                 Stumpf, R. P., Holderied, K., & Sinclair, M. (2003). Determination of water depth with high-resolution satellite imagery over variable bottom types. <em>Limnology and Oceanography</em>, 48(1), 547-556.
             </p>
             <p style="margin-left: 2rem; text-indent: -2rem; padding-left: 2rem;">
                 Lyzenga, D. R. (1978). Passive remote sensing techniques for mapping water depth and bottom features. <em>Applied Optics</em>, 17(3), 379-383.
+            </p>
+            <p style="margin-left: 2rem; text-indent: -2rem; padding-left: 2rem;">
+                MacMahan, J. H., Thornton, E. B., & Reniers, A. J. (2006). Rip current review. <em>Coastal Engineering</em>, 53(2-3), 191-208.
             </p>
         </section>
 
