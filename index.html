@@ -632,20 +632,6 @@ python sentinel_bathymetry.py download-and-process \
         // Add swim zone to layer control
         layerControl.addOverlay(swimZone, "Swim Zone");
 
-        const swimZone = [
-            [42.6655, -81.2180],
-            [42.6640, -81.2150],
-            [42.6635, -81.2155],
-            [42.6650, -81.2185]
-        ];
-        
-        L.polygon(swimZone, {
-            color: 'purple',
-            fillColor: 'purple',
-            fillOpacity: 0.2,
-            weight: 2
-        }).addTo(map).bindPopup('Designated swim area');
-
         // Load recent images dynamically
         const recentImages = [
             {
