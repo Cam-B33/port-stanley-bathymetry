@@ -572,7 +572,66 @@ python sentinel_bathymetry.py download-and-process \
             .addTo(map)
             .bindPopup('<b>Port Stanley Main Beach</b><br>Primary lifeguard station');
 
-        // Placeholder swim zone
+        // LIFEGUARD TOWERS
+        const towerIcon = L.divIcon({
+            className: 'tower-marker',
+            html: '<div style="background: #ff4444; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">🛟</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+
+        // Tower 1 (East)
+        L.marker([42.658712889533405, -81.21593214409477], {icon: towerIcon})
+            .addTo(map)
+            .bindPopup('<b>Tower 1</b><br>East end of swim zone');
+
+        // Tower 2
+        L.marker([42.65912810039798, -81.21743552224498], {icon: towerIcon})
+            .addTo(map)
+            .bindPopup('<b>Tower 2</b>');
+
+        // Central Tower
+        const centralIcon = L.divIcon({
+            className: 'tower-marker',
+            html: '<div style="background: #ff4444; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">⛱️</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        
+        L.marker([42.65961530391666, -81.21815435426022], {icon: centralIcon})
+            .addTo(map)
+            .bindPopup('<b>Central Tower</b><br>Main lifeguard station');
+
+        // Tower 3
+        L.marker([42.65954281537943, -81.21897376911585], {icon: towerIcon})
+            .addTo(map)
+            .bindPopup('<b>Tower 3</b>');
+
+        // Tower 4 (West)
+        L.marker([42.65995506200763, -81.22060991661222], {icon: towerIcon})
+            .addTo(map)
+            .bindPopup('<b>Tower 4</b><br>West end of swim zone');
+
+        // DESIGNATED SWIM ZONE
+        const swimZone = L.polygon([
+            [42.658712889533405, -81.21593214409477],  // NE (T1 shore)
+            [42.65995506200763, -81.22060991661222],   // NW (T4 shore)
+            [42.658607595245144, -81.22060991661222],  // SW (T4 offshore, 150m)
+            [42.657365422770916, -81.21593214409477]   // SE (T1 offshore, 150m)
+        ], {
+            color: '#00ff00',
+            fillColor: '#00ff00',
+            fillOpacity: 0.15,
+            weight: 3,
+            dashArray: '10, 10',
+            interactive: true
+        }).addTo(map);
+        
+        swimZone.bindPopup('<b>Designated Swim Zone</b><br>Patrolled by lifeguards<br>Extends 150m offshore');
+        
+        // Add swim zone to layer control
+        layerControl.addOverlay(swimZone, "Swim Zone");
+
         const swimZone = [
             [42.6655, -81.2180],
             [42.6640, -81.2150],
