@@ -559,10 +559,46 @@ python sentinel_bathymetry.py download-and-process \
             .then(response => response.json())
             .then(data => {
                 console.log('Loaded maps data:', data);
-                if (data.latest && data.latest.filename) {
-                    // Update the overlay source if different
+                
+                // Update the "Last updated" date
+                if (data.latest) {
+                    document.getElementById('last-update-date').textContent = data.latest.date;
+                    
+                    // Update bathymetry overlay to latest map
                     const newSrc = 'maps/' + data.latest.filename;
-                    console.log('Setting bathymetry to:', newSrc);
+                    bathymetryOverlay.setUrl(newSrc);
+                    console.log('Updated bathymetry to:', newSrc);
+                }
+                
+                // Build image gallery
+                const gallery = document.getElementById('image-gallery');
+                if (gallery && data.maps && data.maps.length > 0) {
+                    gallery.innerHTML = ''; // Clear loading text
+                    
+                    data.maps.forEach(map => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: white;';
+                        
+                        card.innerHTML = `
+                            <div style="display: flex; gap: 15px; align-items: start;">
+                                <img src="maps/${map.filename}" 
+                                     style="width: 200px; height: auto; border-radius: 4px; cursor: pointer;" 
+                                     onclick="bathymetryOverlay.setUrl('maps/${map.filename}'); document.getElementById('last-update-date').textContent = '${map.date}';"
+                                     alt="Bathymetry ${map.date}">
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0 0 8px 0;">${map.date}</h4>
+                                    <p style="margin: 0 0 8px 0; color: #666;">${map.description}</p>
+                                    <p style="margin: 0; font-size: 0.85rem; color: #999;">Added: ${new Date(map.added).toLocaleDateString()}</p>
+                                    <button onclick="bathymetryOverlay.setUrl('maps/${map.filename}'); document.getElementById('last-update-date').textContent = '${map.date}';" 
+                                            style="margin-top: 10px; padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                        Load on Map
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        gallery.appendChild(card);
+                    });
                 }
             })
             .catch(err => console.log('Maps data error:', err));
