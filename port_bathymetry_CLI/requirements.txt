@@ -1,0 +1,15 @@
+# Sentinel-2 Bathymetry Processing Requirements
+
+# Core geospatial libraries
+rasterio>=1.3.0
+numpy>=1.24.0
+GDAL>=3.4.0
+
+# Sentinel-2 data access
+sentinelsat>=1.2.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Utilities
+python-dateutil>=2.8.0

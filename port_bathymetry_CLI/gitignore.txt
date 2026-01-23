@@ -32,21 +32,18 @@ output/
 temp/
 logs/
 
-# Sentinel-2 data (large files)
+# Sentinel-2 data
 *.SAFE/
-Sentinel-2 Data/
+*.zip
 
-# Geospatial data (large files)
+# Geospatial data
 *.tif
 *.tiff
 *.jp2
 *.geotiff
 
-# Archives
-*.zip
-
-# Keep templates
-!aoi.geojson
+# Keep example files
+!aoi_template.geojson
 !config_template.py
 
 # IDE
@@ -63,8 +60,3 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
-
-# Website package maps (large generated files)
-website-package/maps/*.png
-website-package/maps/*.json
-!website-package/maps_data.json

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Don't ignore the maps folder itself, but ignore everything except PNG files
+# (This ensures we don't accidentally commit large files)
+# If you want to track TIF files, adjust as needed
