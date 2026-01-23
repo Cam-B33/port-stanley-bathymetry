@@ -632,8 +632,8 @@ Examples:
     pipeline_parser.add_argument('--max-cloud', type=int, default=20,
                                  help='Maximum cloud cover percentage (default: 20)')
     pipeline_parser.add_argument('--output-dir', default='output', help='Output directory')
-    pipeline_parser.add_argument('--website-dir', default='../website-package',
-                                 help='Website directory (default: ../website-package)')
+    pipeline_parser.add_argument('--website-dir', default='../docs',
+                                 help='Website directory (default: ../docs)')
     pipeline_parser.add_argument('--publish', action='store_true',
                                  help='Publish to website after processing')
     pipeline_parser.add_argument('--push', action='store_true',
@@ -789,11 +789,11 @@ Examples:
             # Git push if requested
             if args.push:
                 import subprocess
-                # Git repo is at parent level of website-package
+                # Git repo is at parent level of docs
                 repo_dir = website_dir.parent
                 try:
-                    # Stage website-package changes
-                    subprocess.run(['git', 'add', 'website-package/'], cwd=str(repo_dir), check=True)
+                    # Stage docs changes
+                    subprocess.run(['git', 'add', 'docs/'], cwd=str(repo_dir), check=True)
                     dates = ', '.join(r.get('metadata', {}).get('acquisition_date', 'unknown') for r in results)
                     commit_msg = f"Add bathymetry maps: {dates}"
                     subprocess.run(['git', 'commit', '-m', commit_msg], cwd=str(repo_dir), check=True)

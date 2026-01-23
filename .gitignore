@@ -64,7 +64,4 @@ Thumbs.db
 .ipynb_checkpoints/
 *.ipynb
 
-# Website package maps (large generated files)
-website-package/maps/*.png
-website-package/maps/*.json
-!website-package/maps_data.json
+# Website maps are tracked (needed for GitHub Pages)

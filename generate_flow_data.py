@@ -195,7 +195,7 @@ def main():
     )
     parser.add_argument('--bathymetry', required=True,
                        help='Path to clipped bathymetry GeoTIFF')
-    parser.add_argument('--output-dir', default='website-package/maps',
+    parser.add_argument('--output-dir', default='docs/maps',
                        help='Output directory for JSON files')
     parser.add_argument('--grid-spacing', type=int, default=15,
                        help='Spacing between flow vectors (pixels)')
@@ -228,7 +228,7 @@ def main():
     print(f"  • {flow_json}")
     print(f"  • {grid_json}")
     print("\nNext steps:")
-    print("  1. Copy these to your website-package/maps/ directory")
+    print("  1. Copy these to your docs/maps/ directory")
     print("  2. Update website to load and use the flow data")
     print("  3. git add, commit, push!")
 

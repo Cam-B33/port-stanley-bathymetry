@@ -16,7 +16,7 @@ Port Stanley Bathymetry - A Python/web system that processes Sentinel-2 satellit
    - Calculates bathymetry using band ratio: `ln(Green)/ln(Red)`
    - Outputs: GeoTIFF rasters, PNG visualizations, optional shapefiles
 
-2. **Website** (`website-package/`)
+2. **Website** (`docs/`)
    - Static site deployed to GitHub Pages
    - `index.html` contains embedded CSS/JS with Leaflet.js mapping
    - Particle-based flow animation for rip current visualization
@@ -62,20 +62,20 @@ python update_website.py \
     --add port_bathymetry_CLI/output/bathymetry_2024_06_10.png \
     --date 2024-06-10 \
     --description "Post-storm conditions" \
-    --website-dir website-package
+    --website-dir docs
 
-cd website-package && git add . && git commit -m "Add map" && git push
+cd docs && git add . && git commit -m "Add map" && git push
 ```
 
 ### Flow Analysis
 ```bash
 python generate_flow_data.py \
     --bathymetry port_bathymetry_CLI/output/port_stanley_clipped.tif \
-    --output-dir website-package/maps
+    --output-dir docs/maps
 
 python generate_rip_heatmap.py \
     --bathymetry port_bathymetry_CLI/output/port_stanley_clipped.tif \
-    --output website-package/maps/rip_risk_zones.json
+    --output docs/maps/rip_risk_zones.json
 ```
 
 ## Tech Stack
@@ -84,14 +84,14 @@ python generate_rip_heatmap.py \
 
 **Web:** HTML5, Leaflet.js 1.9.4, HTML5 Canvas (particle animation)
 
-**Deployment:** GitHub Pages at `website-package/` subdirectory (separate git repo)
+**Deployment:** GitHub Pages at `docs/` subdirectory (separate git repo)
 
 ## Key Files
 
 - `port_bathymetry_CLI/sentinel_bathymetry.py` - Main processor (SentinelBathymetryProcessor class)
 - `port_bathymetry_CLI/aoi.geojson` - Area of interest polygon for Port Stanley beach
-- `website-package/index.html` - Interactive map with flow animation
-- `website-package/maps_data.json` - Published maps metadata
+- `docs/index.html` - Interactive map with flow animation
+- `docs/maps_data.json` - Published maps metadata
 - `update_website.py` - Automation for adding new maps
 
 ## Scientific Background
@@ -104,5 +104,5 @@ Flow analysis calculates bathymetry gradients to identify convergence zones (neg
 
 - Virtual environment exists at `venv/`
 - Processing outputs go to `port_bathymetry_CLI/output/`
-- Website repo is separate from main project (only `website-package/` is git-tracked)
+- Website repo is separate from main project (only `docs/` is git-tracked)
 - Copernicus credentials required in `config.py` (not committed)

@@ -179,7 +179,7 @@ def main():
     )
     parser.add_argument('--bathymetry', required=True,
                        help='Path to clipped bathymetry GeoTIFF')
-    parser.add_argument('--output', default='website-package/maps/rip_risk_zones.json',
+    parser.add_argument('--output', default='docs/maps/rip_risk_zones.json',
                        help='Output JSON file')
     parser.add_argument('--grid-resolution', type=int, default=15,
                        help='Grid spacing for risk calculation')
