@@ -246,7 +246,7 @@
 <body>
     <header>
         <h1>Port Stanley Nearshore Bathymetry</h1>
-        <p class="subtitle">Satellite-derived rip current mapping for beach safety</p>
+        <p class="subtitle">Nearshore Bathymetry of Port Stanley, Ontario, CA. Processed from Sentinel-2 Multispectrum imagery. </p>
         <nav>
             <a href="#" class="nav-link active" data-section="dashboard">Dashboard</a>
             <a href="#" class="nav-link" data-section="methodology">Methodology</a>
@@ -254,6 +254,7 @@
         </nav>
     </header>
 
+    
     <main>
         <!-- Dashboard Section -->
         <section id="dashboard-section">
@@ -262,7 +263,7 @@
             <div class="map-info">
                 <h3>Lake Erie — Port Stanley Main Beach</h3>
                 <p class="date-updated">Last updated: <strong id="last-update-date">2024-09-30</strong></p>
-                <p>This map shows relative nearshore bathymetry derived from Sentinel-2 satellite imagery. Darker channels indicate deeper water where rip currents are likely to form.</p>
+                <p>This map shows relative nearshore bathymetry extracted from Sentinel-2 satellite imagery. Also an experimental rip current prediction feature.</p>
             </div>
 
             <div class="map-container">
@@ -271,7 +272,7 @@
                 
                 <!-- Flow Control Panel -->
                 <div id="flow-controls" style="position: absolute; top: 10px; left: 10px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;">
-                    <div style="margin-bottom: 10px; font-weight: 600;">Rip Current Flow</div>
+                    <div style="margin-bottom: 10px; font-weight: 600;">Rip Current Hot Spot Prediction (Experimental!).</div>
                     <label style="display: block; margin-bottom: 8px; cursor: pointer;">
                         <input type="radio" name="flow-mode" value="off" checked> Off
                     </label>
@@ -286,8 +287,8 @@
                     </label>
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">
                         <strong>Heat map legend:</strong><br>
-                        🟢 Safe • 🟡 Low risk<br>
-                        🟠 Moderate • 🔴 Danger
+                        🟢 Very Low • 🟡 Low<br>
+                        🟠 Moderate • 🔴 High
                     </div>
                 </div>
             </div>
@@ -308,7 +309,7 @@
             <div class="map-info">
                 <h3>Reading the Map</h3>
                 <p><strong>Light areas:</strong> Shallow water (sandbars)</p>
-                <p><strong>Dark channels:</strong> Deeper water where rip currents typically flow</p>
+                <p><strong>Dark channels:</strong> Channelized sections of the Lake bottom where rip currents may form</p>
                 <p><strong>Purple contours:</strong> Depth intervals showing underwater topography</p>
             </div>
 
@@ -323,7 +324,7 @@
             <h2>Methodology</h2>
             
             <h3>Overview</h3>
-            <p>This project uses multispectral satellite imagery from the European Space Agency's Sentinel-2 constellation to map shallow water bathymetry. The technique exploits differential light penetration through water columns of varying depths.</p>
+            <p>This project uses multispectral satellite imagery from the European Space Agency's Sentinel-2 constellation to map nearshore bathymetry. Different wavelengths of light penetrate the watercolumn at different depths, by taking the ratio from two different bands of light, a relative model of underwater topography can be created.</p>
 
             <div class="theorem">
                 <div class="theorem-title">Band Ratio Method</div>
@@ -335,7 +336,7 @@
             </div>
 
             <h3>Physical Principles</h3>
-            <p>Water absorbs light differentially by wavelength. Red light (620-670 nm) is absorbed more rapidly than green light (530-590 nm). In shallow water, bottom reflectance contributes to the upwelling radiance measured by the satellite sensor.</p>
+            <p>Water absorbs light differently based on wavelength. Red light (620-670 nm) is absorbed more rapidly than green light (530-590 nm). In shallow water, bottom reflectance contributes to the upwelling radiance measured by the satellite sensor.</p>
             
             <p>The ratio of logarithmic reflectances normalizes for variations in water clarity and illumination while remaining sensitive to depth variations in the 0-10m range typical of nearshore environments.</p>
 
@@ -344,15 +345,15 @@
                 <li><strong>Acquisition:</strong> Sentinel-2 Level-2A (atmospherically corrected) imagery at 10m spatial resolution</li>
                 <li><strong>Band Selection:</strong> Blue (B02), Green (B03), and Red (B04) bands</li>
                 <li><strong>Ratio Calculation:</strong> Log-ratio bathymetry algorithm</li>
-                <li><strong>Clipping:</strong> Extract area of interest around Port Stanley Beach</li>
-                <li><strong>Visualization:</strong> Generate contoured maps highlighting rip current pathways</li>
+                <li><strong>Clipping:</strong> Extract area of interest (aoi) around Port Stanley's Main Beach</li>
+                <li><strong>Visualization:</strong> Generate contoured bathymetric maps displaying the relative underwater topography</li>
             </ol>
 
             <h3>Limitations</h3>
-            <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy degrades with increasing turbidity, wave action, and sun glint. Cloud cover precludes data acquisition. Temporal resolution is limited by satellite revisit frequency (5 days for Sentinel-2 constellation).</p>
+            <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy decreases with increasing turbidity, wave action, and sunlight reflectance. Significant cloud cover can prevent data analysis. Update frequency is affected by the satellite orbit (5 days for Sentinel-2 constellation), and ground conditions that impact data collection.</p>
 
             <h3>Rip Current Risk Analysis</h3>
-            <p>The interactive heat map visualizes rip current formation potential by analyzing bathymetric gradients and flow convergence patterns. This physics-based approach identifies zones where water is likely to accelerate offshore.</p>
+            <p>The interactive heat map visualizes rip current formation potential by analyzing bathymetric gradients and flow convergence patterns. This simultation identifies zones where water is likely to accelerate offshore under differing wind and current conditions.</p>
 
             <div class="theorem">
                 <div class="theorem-title">Flow Dynamics</div>
@@ -380,15 +381,13 @@
                 <li><strong>Offshore flow</strong> (30%): Shore-perpendicular velocity component</li>
             </ul>
             
-            <p>The final risk score is normalized to [0,1] and rendered as a color-coded heat map where red indicates high danger and green indicates safe conditions.</p>
+            <p>The final risk score is normalized to [0,1] and rendered as a color-coded heat map where red indicates high risk and green indicates lower risk conditions.</p>
 
             <h4>Visualization Parameters</h4>
-            <p>The heat map employs Gaussian blur (σ = 25px) to create smooth, continuous risk zones that better represent the diffuse nature of rip current hazards. Cell size is calibrated to balance spatial resolution with visual clarity at typical zoom levels.</p>
+            <p>The heat map uses Gaussian blur (σ = 25px) to create smooth, continuous risk zones that better represent the diffuse nature of rip current hazards. Cell size is calibrated to balance spatial resolution with visual clarity at typical zoom levels.</p>
 
             <h3>Limitations</h3>
-            <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy degrades with increasing turbidity, wave action, and sun glint. Cloud cover precludes data acquisition. Temporal resolution is limited by satellite revisit frequency (5 days for Sentinel-2 constellation).</p>
-            
-            <p>The rip current risk model assumes steady-state flow conditions and does not account for temporal variations in wave height, period, or tidal stage. Actual rip current activity depends on these factors in addition to bathymetry. The model serves as a baseline hazard assessment rather than a real-time prediction system.</p>
+            <p>The rip current risk model assumes steady-state flow conditions and does not account for temporal variations in wave action, wind, or current velocity. Actual rip current activity depends on these factors in addition to bathymetry. The model serves as a baseline hazard assessment rather than a real-time prediction system.</p>
 
             <h3>References</h3>
             <p style="margin-left: 2rem; text-indent: -2rem; padding-left: 2rem;">
@@ -406,7 +405,7 @@
         <section id="code-section" class="hidden">
             <h2>Open Source Implementation</h2>
             
-            <p>The complete processing pipeline is available as an open-source Python command-line tool. The code is designed to be reproducible and easily adaptable to other nearshore environments.</p>
+            <p>The complete processing pipeline is available as an open-source CLI program, available on github. The program is designed to be a reproducible analysis pipeline that is easily adaptable to other nearshore environments.</p>
 
             <h3>Installation</h3>
             <pre><code># Clone repository
@@ -458,7 +457,7 @@ python sentinel_bathymetry.py download-and-process \
             </p>
 
             <h3>Contributing</h3>
-            <p>Contributions welcome. This tool was developed for beach safety applications but can be adapted for coastal research, habitat mapping, and environmental monitoring.</p>
+            <p>Contributions welcome! This is a ongoing project as I continue to refine the methods and presentation.</p>
 
             <h3>License</h3>
             <p>MIT License. Free to use and modify for any purpose.</p>
@@ -466,7 +465,6 @@ python sentinel_bathymetry.py download-and-process \
     </main>
 
     <footer>
-        <p>Developed for lifeguard operations at Port Stanley Beach, Ontario</p>
         <p style="margin-top: 0.5rem;">Data: ESA Copernicus Sentinel-2 | Processing: Python + GDAL | Mapping: Leaflet.js</p>
     </footer>
 
