@@ -48,6 +48,60 @@ class SentinelBathymetryProcessor:
         self.temp_dir = Path(temp_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.temp_dir.mkdir(exist_ok=True)
+        self.analysis_csv = self.output_dir / "analysis_metadata.csv"
+
+    def append_to_analysis_csv(self, result, metadata=None):
+        """
+        Append processing result to analysis_metadata.csv for temporal analysis.
+
+        Args:
+            result: Dictionary from process_scene() with output paths
+            metadata: Optional metadata dict from Sentinel API
+        """
+        import csv
+
+        # Define CSV columns
+        columns = [
+            'acquisition_date', 'acquisition_time', 'satellite', 'tile_id',
+            'cloud_cover', 'processing_date', 'clipped_raster', 'visualization',
+            'product_id', 'quality'
+        ]
+
+        # Build row data
+        meta = metadata or {}
+        row = {
+            'acquisition_date': meta.get('acquisition_date') or result.get('output_name', '').replace('bathymetry_', '').replace('_', '-'),
+            'acquisition_time': meta.get('acquisition_time', ''),
+            'satellite': meta.get('satellite', ''),
+            'tile_id': meta.get('tile_id', ''),
+            'cloud_cover': meta.get('cloud_cover', ''),
+            'processing_date': result.get('processing_date', ''),
+            'clipped_raster': result.get('clipped_raster', ''),
+            'visualization': result.get('visualization', ''),
+            'product_id': meta.get('product_id', ''),
+            'quality': 'good'  # Could add quality checks later
+        }
+
+        # Check if file exists to determine if we need headers
+        file_exists = self.analysis_csv.exists()
+
+        # Check for duplicate dates
+        if file_exists:
+            with open(self.analysis_csv, 'r', newline='') as f:
+                reader = csv.DictReader(f)
+                for existing_row in reader:
+                    if existing_row.get('acquisition_date') == row['acquisition_date']:
+                        logger.info(f"Entry for {row['acquisition_date']} already exists in CSV, skipping")
+                        return
+
+        # Append row
+        with open(self.analysis_csv, 'a', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row)
+
+        logger.info(f"Appended to analysis CSV: {row['acquisition_date']}")
         
     def download_sentinel_data(self, aoi_geojson, start_date, end_date, 
                                username, password, max_cloud_cover=20):
@@ -566,6 +620,9 @@ class SentinelBathymetryProcessor:
         # Include metadata if provided
         if metadata:
             result['metadata'] = metadata
+
+        # Append to analysis CSV for temporal analysis
+        self.append_to_analysis_csv(result, metadata)
 
         return result
 
