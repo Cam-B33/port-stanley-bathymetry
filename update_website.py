@@ -36,47 +36,71 @@ class WebsiteUpdater:
         with open(self.data_file, 'w') as f:
             json.dump(self.maps_data, f, indent=2)
     
-    def add_map(self, bathymetry_png, date_str, description=""):
+    def add_map(self, bathymetry_png, date_str, description="", metadata=None):
         """
         Add a new bathymetry map to the website.
-        
+
         Args:
             bathymetry_png: Path to the bathymetry PNG image
             date_str: Date string (YYYY-MM-DD)
             description: Optional description of conditions
+            metadata: Optional dict with satellite metadata (acquisition_time, satellite, tile_id, cloud_cover, etc.)
         """
         bathymetry_png = Path(bathymetry_png)
-        
+
         if not bathymetry_png.exists():
             print(f"Error: {bathymetry_png} not found")
             return False
-        
+
         # Create filename
         safe_date = date_str.replace('-', '_')
         dest_filename = f"bathymetry_{safe_date}.png"
         dest_path = self.maps_dir / dest_filename
-        
+
         # Copy file
         shutil.copy(bathymetry_png, dest_path)
         print(f"Copied {bathymetry_png} -> {dest_path}")
-        
-        # Add to data
+
+        # Build map entry with all available metadata
         map_entry = {
             'filename': dest_filename,
-            'date': date_str,
+            'acquisition_date': date_str,
             'description': description,
             'added': datetime.now().isoformat()
         }
-        
-        self.maps_data['maps'].append(map_entry)
+
+        # Add satellite metadata if provided
+        if metadata:
+            map_entry['acquisition_time'] = metadata.get('acquisition_time')
+            map_entry['satellite'] = metadata.get('satellite')
+            map_entry['tile_id'] = metadata.get('tile_id')
+            map_entry['cloud_cover'] = metadata.get('cloud_cover')
+            map_entry['product_id'] = metadata.get('product_id')
+
+        # Check for duplicate dates - update existing or append new
+        existing_idx = None
+        for idx, m in enumerate(self.maps_data['maps']):
+            if m.get('acquisition_date') == date_str or m.get('date') == date_str:
+                existing_idx = idx
+                break
+
+        if existing_idx is not None:
+            print(f"Updating existing entry for {date_str}")
+            self.maps_data['maps'][existing_idx] = map_entry
+        else:
+            self.maps_data['maps'].append(map_entry)
+
         self.maps_data['latest'] = map_entry
-        
-        # Sort by date (newest first)
-        self.maps_data['maps'].sort(key=lambda x: x['date'], reverse=True)
-        
+
+        # Sort by acquisition_date (newest first), fallback to 'date' for old entries
+        self.maps_data['maps'].sort(
+            key=lambda x: x.get('acquisition_date') or x.get('date', ''),
+            reverse=True
+        )
+
         self.save_data()
         print(f"Added map for {date_str}")
-        
+
         return True
     
     def generate_maps_js(self):
@@ -95,7 +119,8 @@ class WebsiteUpdater:
         print("\nWebsite updated!")
         print(f"Total maps: {len(self.maps_data['maps'])}")
         if self.maps_data['latest']:
-            print(f"Latest: {self.maps_data['latest']['date']}")
+            latest_date = self.maps_data['latest'].get('acquisition_date') or self.maps_data['latest'].get('date')
+            print(f"Latest: {latest_date}")
 
 
 def main():

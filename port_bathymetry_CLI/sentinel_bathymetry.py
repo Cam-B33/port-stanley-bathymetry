@@ -87,13 +87,33 @@ class SentinelBathymetryProcessor:
             logger.warning("No products found for the given criteria")
             return []
         
-        # Download products
+        # Download products and capture metadata
         downloaded = []
         for product_id, product_info in products.items():
             logger.info(f"Downloading: {product_info['title']}")
             api.download(product_id, directory_path=str(self.temp_dir))
-            downloaded.append(product_id)
-        
+
+            # Extract metadata from API response
+            acquisition_dt = product_info.get('beginposition')
+            title = product_info.get('title', '')
+
+            metadata = {
+                'product_id': product_id,
+                'title': title,
+                'acquisition_date': acquisition_dt.strftime('%Y-%m-%d') if acquisition_dt else None,
+                'acquisition_time': acquisition_dt.strftime('%H:%M:%S') if acquisition_dt else None,
+                'satellite': title[:3] if title else None,  # S2A or S2B
+                'tile_id': product_info.get('tileid'),
+                'cloud_cover': product_info.get('cloudcoverpercentage'),
+                'size': product_info.get('size'),
+            }
+
+            downloaded.append({
+                'product_id': product_id,
+                'title': title,
+                'metadata': metadata
+            })
+
         return downloaded
     
     def calculate_bathymetry_ratio(self, blue_band_path, green_band_path, 
@@ -441,22 +461,33 @@ class SentinelBathymetryProcessor:
         logger.info(f"Contour shapefile saved to: {output_shapefile}")
         return output_shapefile
     
-    def process_scene(self, scene_dir, aoi_geojson, output_name=None):
+    def process_scene(self, scene_dir, aoi_geojson, output_name=None, metadata=None):
         """
         Process a single Sentinel-2 scene to generate bathymetry map.
-        
+
         Args:
             scene_dir: Path to Sentinel-2 SAFE directory
             aoi_geojson: Path to GeoJSON defining area of interest
             output_name: Custom name for output files
-            
+            metadata: Optional metadata dict from download (will be included in result)
+
         Returns:
-            Dictionary with paths to output files
+            Dictionary with paths to output files and metadata
         """
         scene_path = Path(scene_dir)
-        
+
+        # Try to extract date from scene directory name if no output_name given
         if output_name is None:
-            output_name = f"bathymetry_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            # Parse from SAFE dir: S2A_MSIL2A_20240915T161821_...
+            scene_name = scene_path.name
+            if '_MSIL2A_' in scene_name:
+                try:
+                    date_part = scene_name.split('_')[2][:8]  # 20240915
+                    output_name = f"bathymetry_{date_part[:4]}_{date_part[4:6]}_{date_part[6:8]}"
+                except (IndexError, ValueError):
+                    output_name = f"bathymetry_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            else:
+                output_name = f"bathymetry_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         logger.info(f"Processing scene: {scene_path.name}")
         
@@ -524,12 +555,18 @@ class SentinelBathymetryProcessor:
             'bathymetry_raster': str(bathymetry_path),
             'clipped_raster': str(clipped_path),
             'visualization': str(viz_path),
-            'web_overlay': str(web_overlay_path)
+            'web_overlay': str(web_overlay_path),
+            'output_name': output_name,
+            'processing_date': datetime.now().strftime('%Y-%m-%d'),
         }
-        
+
         if contour_shp.exists():
             result['contours_shapefile'] = str(contour_shp)
-        
+
+        # Include metadata if provided
+        if metadata:
+            result['metadata'] = metadata
+
         return result
 
 
@@ -542,15 +579,20 @@ def main():
 Examples:
   # Process a local Sentinel-2 scene
   python sentinel_bathymetry.py process --scene /path/to/S2_SAFE --aoi aoi.geojson
-  
+
   # Download and process imagery for date range
   python sentinel_bathymetry.py download-and-process --aoi aoi.geojson \\
       --start-date 20240601 --end-date 20240610 \\
       --username your_username --password your_password
-  
-  # Process with custom output name
-  python sentinel_bathymetry.py process --scene /path/to/S2_SAFE --aoi aoi.geojson \\
-      --output june_10_2024
+
+  # Full pipeline: download, process, publish to website, and git push
+  python sentinel_bathymetry.py full-pipeline --aoi aoi.geojson \\
+      --days-back 10 --publish --push
+
+  # Full pipeline with explicit credentials
+  python sentinel_bathymetry.py full-pipeline --aoi aoi.geojson \\
+      --username your_username --password your_password \\
+      --days-back 5 --max-cloud 15 --publish --push
         """
     )
     
@@ -573,10 +615,30 @@ Examples:
     download_parser.add_argument('--end-date', required=True, help='End date (YYYYMMDD)')
     download_parser.add_argument('--username', required=True, help='Copernicus Hub username')
     download_parser.add_argument('--password', required=True, help='Copernicus Hub password')
-    download_parser.add_argument('--max-cloud', type=int, default=20, 
+    download_parser.add_argument('--max-cloud', type=int, default=20,
                                 help='Maximum cloud cover percentage (default: 20)')
     download_parser.add_argument('--output-dir', default='output', help='Output directory')
-    
+
+    # Full pipeline command (download, process, publish to website)
+    pipeline_parser = subparsers.add_parser(
+        'full-pipeline',
+        help='Download, process, and publish to website in one command'
+    )
+    pipeline_parser.add_argument('--aoi', required=True, help='Path to AOI GeoJSON file')
+    pipeline_parser.add_argument('--days-back', type=int, default=10,
+                                 help='Number of days back to search for imagery (default: 10)')
+    pipeline_parser.add_argument('--username', help='Copernicus Hub username (or set COPERNICUS_USER env var)')
+    pipeline_parser.add_argument('--password', help='Copernicus Hub password (or set COPERNICUS_PASS env var)')
+    pipeline_parser.add_argument('--max-cloud', type=int, default=20,
+                                 help='Maximum cloud cover percentage (default: 20)')
+    pipeline_parser.add_argument('--output-dir', default='output', help='Output directory')
+    pipeline_parser.add_argument('--website-dir', default='../website-package',
+                                 help='Website directory (default: ../website-package)')
+    pipeline_parser.add_argument('--publish', action='store_true',
+                                 help='Publish to website after processing')
+    pipeline_parser.add_argument('--push', action='store_true',
+                                 help='Git commit and push after publishing (requires --publish)')
+
     args = parser.parse_args()
     
     if args.command is None:
@@ -617,23 +679,130 @@ Examples:
         if not downloaded:
             logger.warning("No scenes downloaded, nothing to process")
             sys.exit(0)
-        
+
         # Process each downloaded scene
-        for scene_id in downloaded:
+        for item in downloaded:
+            product_id = item['product_id']
+            title = item['title']
+            metadata = item['metadata']
+
             # Find the downloaded SAFE directory
-            safe_dirs = list(processor.temp_dir.glob(f"*{scene_id}*.SAFE"))
+            safe_dirs = list(processor.temp_dir.glob(f"*{title}*.SAFE"))
+            if not safe_dirs:
+                safe_dirs = list(processor.temp_dir.glob(f"*{product_id}*.SAFE"))
+
             if safe_dirs:
                 scene_dir = safe_dirs[0]
                 result = processor.process_scene(
                     str(scene_dir),
                     args.aoi,
-                    output_name=scene_id[:15]  # Use product date as name
+                    metadata=metadata
                 )
-                
+
                 if result:
-                    logger.info(f"Processed {scene_id}")
+                    logger.info(f"Processed {title}")
+                    logger.info(f"  Acquisition date: {metadata.get('acquisition_date')}")
+                    logger.info(f"  Cloud cover: {metadata.get('cloud_cover')}%")
                 else:
-                    logger.error(f"Failed to process {scene_id}")
+                    logger.error(f"Failed to process {title}")
+
+    elif args.command == 'full-pipeline':
+        # Get credentials from args or environment
+        username = args.username or os.environ.get('COPERNICUS_USER')
+        password = args.password or os.environ.get('COPERNICUS_PASS')
+
+        if not username or not password:
+            logger.error("Copernicus credentials required. Use --username/--password or set COPERNICUS_USER/COPERNICUS_PASS env vars")
+            sys.exit(1)
+
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=args.days_back)
+
+        logger.info(f"=== Full Pipeline ===")
+        logger.info(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        logger.info(f"AOI: {args.aoi}")
+        logger.info(f"Publish: {args.publish}, Push: {args.push}")
+
+        # Download
+        downloaded = processor.download_sentinel_data(
+            args.aoi,
+            start_date.strftime('%Y%m%d'),
+            end_date.strftime('%Y%m%d'),
+            username,
+            password,
+            max_cloud_cover=args.max_cloud
+        )
+
+        if not downloaded:
+            logger.warning("No scenes downloaded, nothing to process")
+            sys.exit(0)
+
+        # Process each and optionally publish
+        results = []
+        for item in downloaded:
+            product_id = item['product_id']
+            title = item['title']
+            metadata = item['metadata']
+
+            # Find the downloaded SAFE directory
+            safe_dirs = list(processor.temp_dir.glob(f"*{title}*.SAFE"))
+            if not safe_dirs:
+                safe_dirs = list(processor.temp_dir.glob(f"*{product_id}*.SAFE"))
+
+            if safe_dirs:
+                scene_dir = safe_dirs[0]
+                result = processor.process_scene(
+                    str(scene_dir),
+                    args.aoi,
+                    metadata=metadata
+                )
+
+                if result:
+                    results.append(result)
+                    logger.info(f"Processed {title}")
+                else:
+                    logger.error(f"Failed to process {title}")
+
+        # Publish to website if requested
+        if args.publish and results:
+            # Import here to avoid circular dependency
+            sys.path.insert(0, str(Path(__file__).parent.parent))
+            from update_website import WebsiteUpdater
+
+            website_dir = Path(args.website_dir)
+            if not website_dir.is_absolute():
+                website_dir = Path(__file__).parent / args.website_dir
+
+            updater = WebsiteUpdater(str(website_dir), args.output_dir)
+
+            for result in results:
+                metadata = result.get('metadata', {})
+                updater.add_map(
+                    result['visualization'],
+                    metadata.get('acquisition_date', result['processing_date']),
+                    metadata=metadata
+                )
+
+            updater.update_website()
+
+            # Git push if requested
+            if args.push:
+                import subprocess
+                # Git repo is at parent level of website-package
+                repo_dir = website_dir.parent
+                try:
+                    # Stage website-package changes
+                    subprocess.run(['git', 'add', 'website-package/'], cwd=str(repo_dir), check=True)
+                    dates = ', '.join(r.get('metadata', {}).get('acquisition_date', 'unknown') for r in results)
+                    commit_msg = f"Add bathymetry maps: {dates}"
+                    subprocess.run(['git', 'commit', '-m', commit_msg], cwd=str(repo_dir), check=True)
+                    subprocess.run(['git', 'push'], cwd=str(repo_dir), check=True)
+                    logger.info("Pushed to git repository")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Git operation failed: {e}")
+
+        logger.info(f"=== Pipeline complete: {len(results)} maps processed ===")
 
 
 if __name__ == "__main__":
