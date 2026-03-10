@@ -602,10 +602,7 @@ python sentinel_bathymetry.py download-and-process \
             })
             .catch(err => console.log('Maps data error:', err));
 
-        // Add marker for Port Stanley Beach
-        L.marker([42.6666, -81.2169])
-            .addTo(map)
-            .bindPopup('<b>Port Stanley Main Beach</b><br>Primary lifeguard station');
+
 
         // LIFEGUARD TOWERS
         const towerIcon = L.divIcon({
