@@ -2,9 +2,141 @@
   "maps": [
     {
       "filename": "bathymetry_2025_09_30.png",
-      "acquisition_date": "2025-09-30",
-      "description": "",
-      "added": "2026-01-23T13:18:39.748900"
+      "date": "2025-09-30",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.858131"
+    },
+    {
+      "filename": "bathymetry_2025_09_19.png",
+      "date": "2025-09-19",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.857079"
+    },
+    {
+      "filename": "bathymetry_2025_09_17.png",
+      "date": "2025-09-17",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.856222"
+    },
+    {
+      "filename": "bathymetry_2025_09_15.png",
+      "date": "2025-09-15",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.855486"
+    },
+    {
+      "filename": "bathymetry_2025_09_12.png",
+      "date": "2025-09-12",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.854678"
+    },
+    {
+      "filename": "bathymetry_2025_09_02.png",
+      "date": "2025-09-02",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.853983"
+    },
+    {
+      "filename": "bathymetry_2025_08_31.png",
+      "date": "2025-08-31",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.853028"
+    },
+    {
+      "filename": "bathymetry_2025_08_11.png",
+      "date": "2025-08-11",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.852127"
+    },
+    {
+      "filename": "bathymetry_2025_08_06.png",
+      "date": "2025-08-06",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.851289"
+    },
+    {
+      "filename": "bathymetry_2025_08_03.png",
+      "date": "2025-08-03",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.850384"
+    },
+    {
+      "filename": "bathymetry_2025_07_27.png",
+      "date": "2025-07-27",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.849478"
+    },
+    {
+      "filename": "bathymetry_2025_07_21.png",
+      "date": "2025-07-21",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.848510"
+    },
+    {
+      "filename": "bathymetry_2025_07_19.png",
+      "date": "2025-07-19",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.847820"
+    },
+    {
+      "filename": "bathymetry_2025_07_12.png",
+      "date": "2025-07-12",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.847135"
+    },
+    {
+      "filename": "bathymetry_2025_07_04.png",
+      "date": "2025-07-04",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.846258"
+    },
+    {
+      "filename": "bathymetry_2025_07_02.png",
+      "date": "2025-07-02",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.845501"
+    },
+    {
+      "filename": "bathymetry_2025_06_29.png",
+      "date": "2025-06-29",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.844977"
+    },
+    {
+      "filename": "bathymetry_2025_06_22.png",
+      "date": "2025-06-22",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.844426"
+    },
+    {
+      "filename": "bathymetry_2025_06_14.png",
+      "date": "2025-06-14",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.843688"
+    },
+    {
+      "filename": "bathymetry_2025_06_11.png",
+      "date": "2025-06-11",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.843169"
+    },
+    {
+      "filename": "bathymetry_2025_06_02.png",
+      "date": "2025-06-02",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.842697"
+    },
+    {
+      "filename": "bathymetry_2025_05_15.png",
+      "date": "2025-05-15",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.842140"
+    },
+    {
+      "filename": "bathymetry_2025_05_10.png",
+      "date": "2025-05-10",
+      "description": "Port Stanley nearshore bathymetry",
+      "added": "2026-03-10T15:33:06.841611"
     },
     {
       "filename": "bathymetry_2024_10_15.png",
@@ -21,8 +153,8 @@
   ],
   "latest": {
     "filename": "bathymetry_2025_09_30.png",
-    "acquisition_date": "2025-09-30",
-    "description": "",
-    "added": "2026-01-23T13:18:39.748900"
+    "date": "2025-09-30",
+    "description": "Port Stanley nearshore bathymetry",
+    "added": "2026-03-10T15:33:06.858131"
   }
 }
