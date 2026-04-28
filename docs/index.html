@@ -264,34 +264,11 @@
             <div class="map-info">
                 <h3>Lake Erie — Port Stanley Main Beach</h3>
                 <p class="date-updated">Last updated: <strong id="last-update-date">2024-09-30</strong></p>
-                <p>This map shows relative nearshore bathymetry extracted from Sentinel-2 satellite imagery. Also an experimental rip current prediction feature.</p>
+                <p>This map shows relative nearshore bathymetry extracted from Sentinel-2 satellite imagery.</p>
             </div>
 
             <div class="map-container">
                 <div id="map"></div>
-                <canvas id="flow-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1000;"></canvas>
-                
-                <!-- Flow Control Panel -->
-                <div id="flow-controls" style="position: absolute; top: 10px; left: 10px; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1001; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;">
-                    <div style="margin-bottom: 10px; font-weight: 600;">Rip Current Hot Spot Prediction (Experimental!).</div>
-                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
-                        <input type="radio" name="flow-mode" value="off" checked> Off
-                    </label>
-                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
-                        <input type="radio" name="flow-mode" value="east"> East Current
-                    </label>
-                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
-                        <input type="radio" name="flow-mode" value="west"> West Current
-                    </label>
-                    <label style="display: block; margin-bottom: 8px; cursor: pointer;">
-                        <input type="radio" name="flow-mode" value="offshore"> Onshore Flow
-                    </label>
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 0.75rem; color: #666;">
-                        <strong>Heat map legend:</strong><br>
-                        🟢 Very Low • 🟡 Low<br>
-                        🟠 Moderate • 🔴 High
-                    </div>
-                </div>
             </div>
             
             <!-- Map Attribution & Info (outside the map) -->
@@ -353,42 +330,8 @@
             <h3>Limitations</h3>
             <p>This method provides <em>relative</em> rather than absolute depth measurements. Accuracy decreases with increasing turbidity, wave action, and sunlight reflectance. Significant cloud cover can prevent data analysis. Update frequency is affected by the satellite orbit (5 days for Sentinel-2 constellation), and ground conditions that impact data collection.</p>
 
-            <h3>Rip Current Risk Analysis</h3>
-            <p>The interactive heat map visualizes rip current formation potential by analyzing bathymetric gradients and flow convergence patterns. This simultation identifies zones where water is likely to accelerate offshore under differing wind and current conditions.</p>
-
-            <div class="theorem">
-                <div class="theorem-title">Flow Dynamics</div>
-                <p>The risk calculation incorporates three components:</p>
-                <p style="margin-left: 1.5rem;">
-                    <strong>1. Bathymetric gradient:</strong> ∇Z = (∂Z/∂x, ∂Z/∂y)<br>
-                    <strong>2. Flow convergence:</strong> ∇·<strong>u</strong> = ∂u/∂x + ∂v/∂y<br>
-                    <strong>3. Offshore component:</strong> u<sub>⊥</sub> = <strong>u</strong>·<strong>n</strong>
-                </p>
-                <p>where <strong>u</strong> is the velocity field normalized from bathymetric gradients and <strong>n</strong> is the shore-normal direction.</p>
-            </div>
-
-            <h4>Risk Modes</h4>
-            <p><strong>East Current:</strong> Models conditions when longshore currents flow eastward (typical with southwest winds). Water flows parallel to shore until encountering deep channels, where it converges and accelerates offshore.</p>
-            
-            <p><strong>West Current:</strong> Models westward longshore flow (typical with northeast winds). Risk zones shift as flow patterns reverse along the beach.</p>
-            
-            <p><strong>Onshore Flow:</strong> Models pure bathymetry-driven rip currents independent of longshore drift. These represent the natural rip channels that persist across varying wave conditions.</p>
-
-            <h4>Risk Calculation</h4>
-            <p>For each grid cell, risk is computed as a weighted combination of:</p>
-            <ul style="margin-left: 2rem;">
-                <li><strong>Longshore flow component</strong> (40%): Magnitude of east/west current</li>
-                <li><strong>Convergence</strong> (30%): Negative divergence indicating water piling up</li>
-                <li><strong>Offshore flow</strong> (30%): Shore-perpendicular velocity component</li>
-            </ul>
-            
-            <p>The final risk score is normalized to [0,1] and rendered as a color-coded heat map where red indicates high risk and green indicates lower risk conditions.</p>
-
-            <h4>Visualization Parameters</h4>
-            <p>The heat map uses Gaussian blur (σ = 25px) to create smooth, continuous risk zones that better represent the diffuse nature of rip current hazards. Cell size is calibrated to balance spatial resolution with visual clarity at typical zoom levels.</p>
-
             <h3>Limitations</h3>
-            <p>The rip current risk model assumes steady-state flow conditions and does not account for temporal variations in wave action, wind, or current velocity. Actual rip current activity depends on these factors in addition to bathymetry. The model serves as a baseline hazard assessment rather than a real-time prediction system.</p>
+            <p>The model assumes steady-state flow conditions and does not account for temporal variations in wave action, wind, or current velocity. Actual rip current activity depends on these factors in addition to bathymetry.</p>
 
             <h3>References</h3>
             <p style="margin-left: 2rem; text-indent: -2rem; padding-left: 2rem;">
@@ -684,117 +627,6 @@ python sentinel_bathymetry.py download-and-process \
             gallery.appendChild(figure);
         });
 
-        // ========================================================================
-        // INTERACTIVE RIP CURRENT HEAT MAP
-        // ========================================================================
-        
-        const flowCanvas = document.getElementById('flow-canvas');
-        const flowCtx = flowCanvas.getContext('2d');
-        let flowMode = 'off';
-        let riskZones = null;  // Will hold risk data
-        
-        // Load risk zone data
-        fetch('maps/rip_risk_zones.json')
-            .then(response => response.json())
-            .then(data => {
-                riskZones = data;
-                console.log('Loaded risk zones:', data.metadata);
-            })
-            .catch(err => console.log('Risk zones not found, heat map disabled'));
-        
-        // Resize canvas to match map
-        function resizeCanvas() {
-            const mapElement = document.getElementById('map');
-            flowCanvas.width = mapElement.offsetWidth;
-            flowCanvas.height = mapElement.offsetHeight;
-            drawHeatMap();  // Redraw when resized
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        map.on('zoom move', resizeCanvas);
-        
-        // Draw heat map based on current flow mode
-        function drawHeatMap() {
-            if (flowMode === 'off' || !riskZones) {
-                flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
-                return;
-            }
-            
-            flowCtx.clearRect(0, 0, flowCanvas.width, flowCanvas.height);
-            
-            // Get risk zones for current direction
-            const zones = riskZones.risk_zones[flowMode];
-            if (!zones || zones.length === 0) return;
-            
-            // Draw each risk cell as a colored square
-            zones.forEach(zone => {
-                const point = map.latLngToContainerPoint([zone.lat, zone.lon]);
-                
-                // Color based on risk level (0-1)
-                // Green (safe) → Yellow → Orange → Red (danger)
-                let r, g, b;
-                if (zone.risk < 0.25) {
-                    // Green to yellow
-                    r = Math.floor(zone.risk * 4 * 255);
-                    g = 255;
-                    b = 0;
-                } else if (zone.risk < 0.5) {
-                    // Yellow to orange
-                    r = 255;
-                    g = Math.floor((1 - (zone.risk - 0.25) * 4) * 255);
-                    b = 0;
-                } else if (zone.risk < 0.75) {
-                    // Orange to red
-                    r = 255;
-                    g = Math.floor((1 - (zone.risk - 0.5) * 4) * 128);
-                    b = 0;
-                } else {
-                    // Deep red
-                    r = 255;
-                    g = 0;
-                    b = 0;
-                }
-                
-                // Larger cells with blur for fuzzy continuous effect
-                const cellSize = 35;  // Increased from 20 to 35
-                
-                // Add gaussian blur effect
-                flowCtx.shadowBlur = 25;  // Strong blur
-                flowCtx.shadowColor = `rgba(${r}, ${g}, ${b}, ${0.6 + zone.risk * 0.4})`;
-                
-                // Draw main cell
-                flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.3 + zone.risk * 0.5})`;
-                flowCtx.fillRect(
-                    point.x - cellSize/2,
-                    point.y - cellSize/2,
-                    cellSize,
-                    cellSize
-                );
-                
-                // Draw inner glow for high risk
-                if (zone.risk > 0.5) {
-                    flowCtx.shadowBlur = 35;
-                    flowCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${zone.risk * 0.4})`;
-                    flowCtx.fillRect(
-                        point.x - cellSize/2,
-                        point.y - cellSize/2,
-                        cellSize,
-                        cellSize
-                    );
-                }
-                
-                // Reset shadow
-                flowCtx.shadowBlur = 0;
-            });
-        }
-        
-        // Handle flow mode changes
-        document.querySelectorAll('input[name="flow-mode"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                flowMode = e.target.value;
-                drawHeatMap();
-            });
-        });
     </script>
 </body>
 </html>
