@@ -2,6 +2,9 @@
 """
 Website Update Script
 Automatically updates the website with new bathymetry maps
+
+CRITICAL: ALWAYS uses clean _web.png overlay files (no title, no colorbar)
+The script will auto-detect and use _web.png versions when available.
 """
 
 import json
@@ -36,71 +39,69 @@ class WebsiteUpdater:
         with open(self.data_file, 'w') as f:
             json.dump(self.maps_data, f, indent=2)
     
-    def add_map(self, bathymetry_png, date_str, description="", metadata=None):
+    def add_map(self, bathymetry_png, date_str, description=""):
         """
         Add a new bathymetry map to the website.
-
+        ALWAYS uses the clean _web.png version (no title, no colorbar)
+        
         Args:
-            bathymetry_png: Path to the bathymetry PNG image
+            bathymetry_png: Path to bathymetry PNG (will auto-detect _web.png version)
             date_str: Date string (YYYY-MM-DD)
             description: Optional description of conditions
-            metadata: Optional dict with satellite metadata (acquisition_time, satellite, tile_id, cloud_cover, etc.)
         """
         bathymetry_png = Path(bathymetry_png)
-
+        
+        # CRITICAL: Always use the _web.png version (clean overlay)
+        if not bathymetry_png.name.endswith('_web.png'):
+            # Try to find the _web.png version
+            web_version = bathymetry_png.parent / (bathymetry_png.stem + '_web.png')
+            if web_version.exists():
+                print(f"⚠️  Auto-correcting: Using {web_version.name} instead of {bathymetry_png.name}")
+                bathymetry_png = web_version
+            else:
+                print(f"⚠️  WARNING: {bathymetry_png.name} is not a _web.png file!")
+                print(f"   Expected: {web_version.name}")
+                print(f"   The _web.png version should have NO title and NO colorbar")
+                response = input("Continue anyway? (y/N): ")
+                if response.lower() != 'y':
+                    return False
+        
         if not bathymetry_png.exists():
-            print(f"Error: {bathymetry_png} not found")
+            print(f"❌ Error: {bathymetry_png} not found")
             return False
-
+        
         # Create filename
         safe_date = date_str.replace('-', '_')
         dest_filename = f"bathymetry_{safe_date}.png"
         dest_path = self.maps_dir / dest_filename
-
+        
         # Copy file
         shutil.copy(bathymetry_png, dest_path)
-        print(f"Copied {bathymetry_png} -> {dest_path}")
-
-        # Build map entry with all available metadata
+        print(f"✓ Copied {bathymetry_png} -> {dest_path}")
+        
+        # Add to data with CONSISTENT field names
         map_entry = {
             'filename': dest_filename,
-            'acquisition_date': date_str,
+            'date': date_str,  # Always use 'date' (not 'acquisition_date')
             'description': description,
             'added': datetime.now().isoformat()
         }
-
-        # Add satellite metadata if provided
-        if metadata:
-            map_entry['acquisition_time'] = metadata.get('acquisition_time')
-            map_entry['satellite'] = metadata.get('satellite')
-            map_entry['tile_id'] = metadata.get('tile_id')
-            map_entry['cloud_cover'] = metadata.get('cloud_cover')
-            map_entry['product_id'] = metadata.get('product_id')
-
-        # Check for duplicate dates - update existing or append new
-        existing_idx = None
-        for idx, m in enumerate(self.maps_data['maps']):
-            if m.get('acquisition_date') == date_str or m.get('date') == date_str:
-                existing_idx = idx
-                break
-
-        if existing_idx is not None:
-            print(f"Updating existing entry for {date_str}")
-            self.maps_data['maps'][existing_idx] = map_entry
-        else:
-            self.maps_data['maps'].append(map_entry)
-
+        
+        # Remove old entry with same date if exists (avoid duplicates)
+        self.maps_data['maps'] = [
+            m for m in self.maps_data['maps'] 
+            if m.get('date') != date_str and m.get('acquisition_date') != date_str
+        ]
+        
+        self.maps_data['maps'].append(map_entry)
         self.maps_data['latest'] = map_entry
-
-        # Sort by acquisition_date (newest first), fallback to 'date' for old entries
-        self.maps_data['maps'].sort(
-            key=lambda x: x.get('acquisition_date') or x.get('date', ''),
-            reverse=True
-        )
-
+        
+        # Sort by date (newest first)
+        self.maps_data['maps'].sort(key=lambda x: x.get('date', x.get('acquisition_date', '')), reverse=True)
+        
         self.save_data()
-        print(f"Added map for {date_str}")
-
+        print(f"✓ Added map for {date_str}")
+        
         return True
     
     def generate_maps_js(self):
@@ -119,8 +120,7 @@ class WebsiteUpdater:
         print("\nWebsite updated!")
         print(f"Total maps: {len(self.maps_data['maps'])}")
         if self.maps_data['latest']:
-            latest_date = self.maps_data['latest'].get('acquisition_date') or self.maps_data['latest'].get('date')
-            print(f"Latest: {latest_date}")
+            print(f"Latest: {self.maps_data['latest']['date']}")
 
 
 def main():
